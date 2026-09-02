@@ -1,8 +1,15 @@
-const express=require('express')
-let app=express()
-app.use(express.static('public'))
-app.use(express.json())
+require('./config/env')
+const app = require('./app')
+const connectDB = require('./config/db')
+const env = require('./config/env')
 
-app.listen(3000,()=>{
-    console.log('Server is running on port 3000')
-})
+const start = async () => {
+  // Connect to MongoDB (warns but doesn't crash if MONGO_URI is missing)
+  await connectDB()
+
+  app.listen(env.PORT, () => {
+    console.log(`StudioMind server running on port ${env.PORT}`)
+  })
+}
+
+start()
