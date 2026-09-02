@@ -1,17 +1,16 @@
 const env = require('../../config/env')
 
-const PARALLEL_API_URL = 'https://api.parallel.ai/v1beta/search'
+const PARALLEL_API_URL = 'https://api.parallel.ai/v1/search'
 
 /**
  * Verify a claim using Parallel's Search API.
  * @param {Object} options
  * @param {string} options.objective - What to verify about the claim.
  * @param {string[]} options.searchQueries - Search queries to run.
- * @param {number} [options.maxResults=5] - Max results per query.
- * @param {number} [options.excerpts=3] - Number of excerpts to retrieve.
+ * @param {string} [options.mode='fast'] - Search mode: 'fast', 'advanced', or 'turbo'.
  * @returns {Promise<Object>} - Parallel search response.
  */
-const verifyClaim = async ({ objective, searchQueries, maxResults = 5, excerpts = 3 }) => {
+const verifyClaim = async ({ objective, searchQueries, mode = 'fast' }) => {
   if (!env.PARALLEL_API_KEY) {
     throw new Error('PARALLEL_API_KEY is not set in environment variables')
   }
@@ -25,8 +24,7 @@ const verifyClaim = async ({ objective, searchQueries, maxResults = 5, excerpts 
     body: JSON.stringify({
       objective,
       search_queries: searchQueries,
-      max_results: maxResults,
-      excerpts,
+      mode,
     }),
   })
 

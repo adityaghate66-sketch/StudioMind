@@ -8,7 +8,7 @@ const { getGeminiClient } = require('../../config/gemini')
  * @param {string} [options.model='gemini-2.5-flash'] - Model to use.
  * @returns {Promise<string|object>} - Raw text or parsed JSON.
  */
-const generate = async ({ prompt, expectJson = false, model = 'gemini-2.5-flash' }) => {
+const generate = async ({ prompt, expectJson = false, model = 'gemini-3.6-flash' }) => {
   const genai = getGeminiClient()
 
   const config = {}
