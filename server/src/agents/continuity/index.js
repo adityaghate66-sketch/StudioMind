@@ -25,23 +25,27 @@ const runContinuityAgent = async (sceneText) => {
     }
   }
 
-  // Step 2: Verify each claim via Parallel API
-  const verificationResults = await Promise.all(
-    claims.map(async (claim) => {
-      try {
-        const result = await verifyClaim({
-          objective: `Verify the following claim: "${claim.claim}"`,
-          searchQueries: [claim.claim, claim.context || claim.claim],
-          maxResults: 5,
-          excerpts: 3,
-        })
-        return result
-      } catch (err) {
-        console.error(`Parallel verification failed for claim "${claim.claim}":`, err.message)
-        return { status: 'verification_failed', error: err.message }
-      }
-    })
-  )
+  // Step 2: Verify each claim via Parallel API (sequential to avoid 429s)
+  const verificationResults = []
+  for (let i = 0; i < claims.length; i++) {
+    const claim = claims[i]
+    try {
+      const result = await verifyClaim({
+        objective: `Verify the following claim: "${claim.claim}"`,
+        searchQueries: [claim.claim, claim.context || claim.claim],
+        maxResults: 5,
+        excerpts: 3,
+      })
+      verificationResults.push(result)
+    } catch (err) {
+      console.error(`Parallel verification failed for claim "${claim.claim}":`, err.message)
+      verificationResults.push({ status: 'verification_failed', error: err.message })
+    }
+    // Brief delay between requests to respect rate limits
+    if (i < claims.length - 1) {
+      await new Promise((r) => setTimeout(r, 200))
+    }
+  }
 
   // Step 3: Synthesize verdicts
   const synthPrompt = continuitySynthesisPrompt(sceneText, claims, verificationResults)

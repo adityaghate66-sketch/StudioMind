@@ -35,6 +35,11 @@ const pipelineRunSchema = new mongoose.Schema(
       enum: ['pending', 'running', 'complete', 'failed'],
       default: 'pending',
     },
+    agentStatus: {
+      type: String,
+      enum: ['screenplay', 'continuity', 'storyboard', ''],
+      default: '',
+    },
     sceneText: {
       type: String,
       default: '',

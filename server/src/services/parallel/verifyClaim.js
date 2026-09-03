@@ -8,9 +8,11 @@ const PARALLEL_API_URL = 'https://api.parallel.ai/v1/search'
  * @param {string} options.objective - What to verify about the claim.
  * @param {string[]} options.searchQueries - Search queries to run.
  * @param {string} [options.mode='fast'] - Search mode: 'fast', 'advanced', or 'turbo'.
+ * @param {number} [options.maxResults=5] - Max search results to return.
+ * @param {number} [options.excerpts=3] - Max excerpts per result.
  * @returns {Promise<Object>} - Parallel search response.
  */
-const verifyClaim = async ({ objective, searchQueries, mode = 'fast' }) => {
+const verifyClaim = async ({ objective, searchQueries, mode = 'fast', maxResults = 5, excerpts = 3 }) => {
   if (!env.PARALLEL_API_KEY) {
     throw new Error('PARALLEL_API_KEY is not set in environment variables')
   }
@@ -25,6 +27,8 @@ const verifyClaim = async ({ objective, searchQueries, mode = 'fast' }) => {
       objective,
       search_queries: searchQueries,
       mode,
+      max_results: maxResults,
+      excerpts,
     }),
   })
 
