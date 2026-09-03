@@ -10,9 +10,10 @@ const continuitySynthesisPrompt = require('../../prompts/continuitySynthesisProm
  * 3. Gemini synthesizes verdicts per claim.
  *
  * @param {string} sceneText - The screenplay scene text.
+ * @param {AbortSignal} [signal] - AbortSignal for cancellation.
  * @returns {Promise<Object>} - { claims: [...], overallRisk, summary }
  */
-const runContinuityAgent = async (sceneText) => {
+const runContinuityAgent = async (sceneText, signal) => {
   // Step 1: Extract claims
   const extractPrompt = continuityExtractionPrompt(sceneText)
   const claims = await generate({ prompt: extractPrompt, expectJson: true })
@@ -31,11 +32,12 @@ const runContinuityAgent = async (sceneText) => {
     const claim = claims[i]
     try {
       const result = await verifyClaim({
-        objective: `Verify the following claim: "${claim.claim}"`,
-        searchQueries: [claim.claim, claim.context || claim.claim],
-        maxResults: 5,
-        excerpts: 3,
-      })
+          objective: `Verify the following claim: "${claim.claim}"`,
+          searchQueries: [claim.claim, claim.context || claim.claim],
+          maxResults: 5,
+          excerpts: 3,
+          signal,
+        })
       verificationResults.push(result)
     } catch (err) {
       console.error(`Parallel verification failed for claim "${claim.claim}":`, err.message)

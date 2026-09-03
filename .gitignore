@@ -13,3 +13,17 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Build output
+dist/
+build/
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Dead Python scaffold (project is Node-only)
+main.py
+pyproject.toml
+requirements.txt
+.python-version
