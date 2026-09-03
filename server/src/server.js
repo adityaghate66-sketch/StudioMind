@@ -4,7 +4,11 @@ const connectDB = require('./config/db')
 const env = require('./config/env')
 
 const start = async () => {
-  // Connect to MongoDB (warns but doesn't crash if MONGO_URI is missing)
+  // Validate required env vars before touching the DB or the network.
+  // Throws immediately if MONGO_URI, GEMINI_API_KEY, or PARALLEL_API_KEY is missing.
+  env.validate()
+
+  // Connect to MongoDB
   await connectDB()
 
   app.listen(env.PORT, () => {
@@ -12,4 +16,7 @@ const start = async () => {
   })
 }
 
-start()
+start().catch((err) => {
+  console.error(`Startup failed: ${err.message}`)
+  process.exit(1)
+})

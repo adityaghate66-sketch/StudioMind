@@ -2,11 +2,7 @@ const mongoose = require('mongoose')
 const env = require('./env')
 
 const connectDB = async () => {
-  if (!env.MONGO_URI) {
-    console.warn('⚠️  MONGO_URI is not set — running without database. Pipeline runs will not persist.')
-    return
-  }
-
+  // MONGO_URI is validated at boot by env.validate(); if we reach here it is set.
   try {
     const conn = await mongoose.connect(env.MONGO_URI)
     console.log(`MongoDB Connected: ${conn.connection.host}`)
