@@ -174,14 +174,15 @@ forget the other two.
 Second, when we move to Vertex AI next week, we change **one file** and nothing
 else moves. That's the whole payoff.
 
-> **What's next here — this is our biggest unknown.** Nobody has confirmed that
-> our Parallel request actually matches their API. We send fields called
-> `objective`, `search_queries`, `mode`, `max_results`, `excerpts`. If even one
-> name is wrong, we get a rejection, the code quietly swallows it, and every
-> claim comes back "unverifiable" with no error shown anywhere.
->
-> Our entire partner-track eligibility depends on this one call working. It has
-> to be proven with a real successful response before anything else matters.
+> **Update (verified):** the Parallel call is confirmed against their live docs
+> and OpenAPI spec, and now runs through the official `parallel-web` SDK (the
+> integration the hackathon rules name). Two things were wrong before and are
+> fixed: `max_results` belongs nested under `advanced_settings`, and `excerpts`
+> isn't a V1 field at all — the old top-level names came back HTTP 422 on every
+> call. Errors now carry the HTTP status and full response body in the log line,
+> so a misconfigured request is loud instead of silently turning every claim
+> "unverifiable". The confirmed response shape is documented in a comment above
+> `verifyClaim` in `server/src/services/parallel/verifyClaim.js`.
 
 ### `utils/normalise.js` — quality control at the door
 
@@ -377,7 +378,7 @@ The three routes:
 | Timeout / cancellation | Working |
 | Startup key checking | Working |
 | **Proven to run end to end** | **Not yet** |
-| **Parallel request verified** | **Not yet** |
+| Parallel request verified | **Working** |
 | Vertex AI (Google Cloud) | Not started |
 | Endpoint protection | Not started |
 | Deployment (Cloud Run) | Not started |
@@ -386,7 +387,9 @@ The three routes:
 **Order of work:**
 
 1. Run it once with real keys — prove Gemini and Parallel both actually respond
-2. Verify the Parallel request against their live docs
+2. ~~Verify the Parallel request against their live docs~~ — done: it runs through the
+   `parallel-web` SDK against `/v1/search` and returns real results (see the comment
+   above `verifyClaim`)
 3. Add `responseSchema` to the Gemini calls
 4. Move to Vertex AI
 5. Protect the endpoints
@@ -413,3 +416,4 @@ one, test it across several different briefs — not just the one you're looking
 **Never retype a file from terminal output.** Edit it in place. Terminal output
 gets truncated and you will silently lose the bottom half of a file without
 noticing.
+c
