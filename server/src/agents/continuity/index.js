@@ -2,6 +2,8 @@ const { generate } = require('../../services/gemini/textGeneration')
 const { verifyClaim } = require('../../services/parallel/verifyClaim')
 const continuityExtractionPrompt = require('../../prompts/continuityExtractionPrompt')
 const continuitySynthesisPrompt = require('../../prompts/continuitySynthesisPrompt')
+const continuityExtractionSchema = require('../../schemas/continuityExtraction')
+const continuitySynthesisSchema = require('../../schemas/continuitySynthesis')
 
 /**
  * Continuity & Legal Risk agent.
@@ -16,7 +18,11 @@ const continuitySynthesisPrompt = require('../../prompts/continuitySynthesisProm
 const runContinuityAgent = async (sceneText, signal) => {
   // Step 1: Extract claims
   const extractPrompt = continuityExtractionPrompt(sceneText)
-  const claims = await generate({ prompt: extractPrompt, expectJson: true })
+  const claims = await generate({
+    prompt: extractPrompt,
+    expectJson: true,
+    schema: continuityExtractionSchema,
+  })
 
   if (!Array.isArray(claims) || claims.length === 0) {
     return {
@@ -51,7 +57,11 @@ const runContinuityAgent = async (sceneText, signal) => {
 
   // Step 3: Synthesize verdicts
   const synthPrompt = continuitySynthesisPrompt(sceneText, claims, verificationResults)
-  const report = await generate({ prompt: synthPrompt, expectJson: true })
+  const report = await generate({
+    prompt: synthPrompt,
+    expectJson: true,
+    schema: continuitySynthesisSchema,
+  })
 
   return report
 }

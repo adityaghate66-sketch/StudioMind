@@ -6,6 +6,9 @@ const env = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   PARALLEL_API_KEY: process.env.PARALLEL_API_KEY || '',
   PIPELINE_TIMEOUT_MS: Number(process.env.PIPELINE_TIMEOUT_MS) || 120_000,
+  // Optional override for the Gemini model (textGeneration.js defaults to
+  // 'gemini-3.6-flash'); handy when a model is rate-limited or deprecated.
+  GEMINI_MODEL: process.env.GEMINI_MODEL || '',
 }
 
 /**

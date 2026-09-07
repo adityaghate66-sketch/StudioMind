@@ -61,9 +61,11 @@ const runDirectorPipeline = async (brief, runId, signal) => {
   const continuityOverallRisk = closestEnum(
     continuityReport?.overallRisk,
     VALID_RISK,
-    'low'
+    'low',
+    'continuityReport',
+    'overallRisk'
   )
-  const continuitySummary = safeStr(continuityReport?.summary, '')
+  const continuitySummary = safeStr(continuityReport?.summary, '', 'continuityReport', 'summary')
 
   abortCheck()
   await saveProgress({

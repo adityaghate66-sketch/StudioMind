@@ -1,5 +1,6 @@
 const { generate } = require('../../services/gemini/textGeneration')
 const storyboardPrompt = require('../../prompts/storyboardPrompt')
+const storyboardSchema = require('../../schemas/storyboard')
 
 /**
  * Storyboard agent: turns a scene + continuity report into a 4-8 shot list.
@@ -9,7 +10,7 @@ const storyboardPrompt = require('../../prompts/storyboardPrompt')
  */
 const runStoryboardAgent = async (sceneText, continuityReport) => {
   const prompt = storyboardPrompt(sceneText, continuityReport)
-  const result = await generate({ prompt, expectJson: true })
+  const result = await generate({ prompt, expectJson: true, schema: storyboardSchema })
   return result
 }
 
