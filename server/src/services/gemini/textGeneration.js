@@ -1,8 +1,16 @@
 const { getGeminiClient } = require('../../config/gemini')
 const env = require('../../config/env')
+const { isTransient, extractRetryDelay, withRetry } = require('../../config/errors')
 
 /**
  * Generate text using Gemini.
+ *
+ * Production note (Phase 2): the underlying network call is wrapped in retry
+ * with exponential backoff so a transient 429/503 mid-pipeline does not kill
+ * the whole run. Retry is bounded to 4 attempts and respects both the API's
+ * own retryDelay when present and the AbortSignal so a pipeline timeout still
+ * cancels cleanly.
+ *
  * @param {Object} options
  * @param {string} options.prompt - The full prompt to send.
  * @param {boolean} [options.expectJson=false] - If true, request JSON output and parse it.
@@ -11,9 +19,10 @@ const env = require('../../config/env')
  *   Define these in server/src/schemas/ — one per JSON-returning agent step.
  * @param {string} [options.model] - Model to use. Defaults to env.GEMINI_MODEL,
  *   then 'gemini-3.6-flash'.
+ * @param {AbortSignal} [options.signal] - Pipeline cancellation signal.
  * @returns {Promise<string|object>} - Raw text or parsed JSON.
  */
-const generate = async ({ prompt, expectJson = false, model, schema }) => {
+const generate = async ({ prompt, expectJson = false, model, schema, signal }) => {
   const resolvedModel = model || env.GEMINI_MODEL || 'gemini-3.6-flash'
   const genai = getGeminiClient()
 
@@ -26,28 +35,30 @@ const generate = async ({ prompt, expectJson = false, model, schema }) => {
     config.responseSchema = schema
   }
 
-  const response = await genai.models.generateContent({
-    model: resolvedModel,
-    contents: prompt,
-    config,
-  })
+  return withRetry(`Gemini ${resolvedModel}`, async () => {
+    const response = await genai.models.generateContent({
+      model: resolvedModel,
+      contents: prompt,
+      config,
+    })
 
-  const text = response.text
+    const text = response.text
 
-  if (expectJson) {
-    try {
-      return JSON.parse(text)
-    } catch {
-      // Try to extract JSON from markdown code blocks
-      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[1].trim())
+    if (expectJson) {
+      try {
+        return JSON.parse(text)
+      } catch {
+        // Try to extract JSON from markdown code blocks
+        const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[1].trim())
+        }
+        throw new Error('Failed to parse Gemini response as JSON')
       }
-      throw new Error('Failed to parse Gemini response as JSON')
     }
-  }
 
-  return text
+    return text
+  }, { signal })
 }
 
 module.exports = { generate }

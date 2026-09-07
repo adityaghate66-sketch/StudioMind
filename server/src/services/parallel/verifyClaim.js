@@ -1,5 +1,6 @@
 const Parallel = require('parallel-web')
 const env = require('../../config/env')
+const { isTransient, extractRetryDelay, withRetry } = require('../../config/errors')
 
 /**
  * Verify a claim using Parallel's official Search API.
@@ -63,38 +64,40 @@ const verifyClaim = async ({ objective, searchQueries, mode = 'fast', maxResults
     throw new Error('PARALLEL_API_KEY is not set in environment variables')
   }
 
-  try {
-    return await getClient().search(
-      {
-        objective,
-        search_queries: searchQueries,
-        mode,
-        advanced_settings: { max_results: maxResults },
-      },
-      // RequestOptions — carries the AbortSignal used for pipeline cancellation.
-      { signal }
-    )
-  } catch (err) {
-    // parallel-web throws typed APIError subclasses (AuthenticationError, UnprocessableEntityError,
-    // RateLimitError, ...) for non-2xx responses; err.status is the HTTP status and err.error is the
-    // parsed response body. Normalize them into a single message so logs are self-explanatory.
-    if (typeof err.status === 'number') {
-      const body = err.error
-      const detail = body && body.error ? body.error : body
-      // 422 = strict request validation (additionalProperties: false) — a schema drift shows up here.
-      const hint =
-        err.status === 422
-          ? ' — check request field names against https://docs.parallel.ai/api-reference/search/search'
-          : ''
-      throw new Error(
-        `Parallel Search API error (HTTP ${err.status}): ${detail && detail.message ? detail.message : err.message}` +
-          (body ? ` Response body: ${JSON.stringify(body)}` : '') +
-          hint
+  return withRetry('Parallel verifyClaim', async () => {
+    try {
+      return await getClient().search(
+        {
+          objective,
+          search_queries: searchQueries,
+          mode,
+          advanced_settings: { max_results: maxResults },
+        },
+        // RequestOptions — carries the AbortSignal used for pipeline cancellation.
+        { signal }
       )
+    } catch (err) {
+      // parallel-web throws typed APIError subclasses (AuthenticationError, UnprocessableEntityError,
+      // RateLimitError, ...) for non-2xx responses; err.status is the HTTP status and err.error is the
+      // parsed response body. Normalize them into a single message so logs are self-explanatory.
+      if (typeof err.status === 'number') {
+        const body = err.error
+        const detail = body && body.error ? body.error : body
+        // 422 = strict request validation (additionalProperties: false) — a schema drift shows up here.
+        const hint =
+          err.status === 422
+            ? ' — check request field names against https://docs.parallel.ai/api-reference/search/search'
+            : ''
+        throw new Error(
+          `Parallel Search API error (HTTP ${err.status}): ${detail && detail.message ? detail.message : err.message}` +
+            (body ? ` Response body: ${JSON.stringify(body)}` : '') +
+            hint
+        )
+      }
+      // Anything else (request aborted via signal, connection failure) passes through unchanged.
+      throw err
     }
-    // Anything else (request aborted via signal, connection failure) passes through unchanged.
-    throw err
-  }
+  }, { signal })
 }
 
 let client = null
