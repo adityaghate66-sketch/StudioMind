@@ -86,6 +86,18 @@ function checkStoryboard(sb, run) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// Optional argv: a 1-based brief index to run just that one (e.g. `node runSchemaAcceptance.js 3`),
+// or 'all' (default) for the full 5-brief sweep.
+const onlyIdx = (() => {
+  const a = process.argv[2]
+  if (a === undefined || a === 'all') return null
+  const n = Number(a)
+  return Number.isInteger(n) && n >= 1 && n <= briefs.length ? n : null
+})()
+if (process.argv[2] !== undefined && onlyIdx === null && process.argv[2] !== 'all') {
+  console.log(`Ignoring unknown arg "${process.argv[2]}" (expected a brief index 1-${briefs.length} or 'all')`)
+}
+
 // Transient Gemini/API spikes (503/429) should not fail the acceptance run.
 const withRetry = async (label, fn, attempts = 5) => {
   for (let a = 1; a <= attempts; a++) {
@@ -95,14 +107,18 @@ const withRetry = async (label, fn, attempts = 5) => {
       const msg = String(err && err.message ? err.message : err)
       const transient = /(503|429|UNAVAILABLE|high demand|rate limit|ETIMEDOUT|ECONNRESET|fetch failed|ENOTFOUND|socket hang up|timeout)/i.test(msg)
       if (!transient || a === attempts) throw err
-      console.log(`[${label}] transient API/network error, retry ${a}/${attempts - 1} in ${a * 5}s...`)
-      await sleep(a * 5000)
+      // Prefer the API's own retryDelay (RetryInfo) when present, else exponential backoff.
+      const delayMatch = msg.match(/retryDelay"?:\s*"?([\d.]+)s?"?/) || msg.match(/retry in ([\d.]+)s/i)
+      const delay = delayMatch ? Math.ceil(Number(delayMatch[1]) * 1.5) : a * 10
+      console.log(`[${label}] transient API/network error, retry ${a}/${attempts - 1} in ${delay}s...`)
+      await sleep(delay * 1000)
     }
   }
 }
 
 ;(async () => {
   for (let b = 0; b < briefs.length; b++) {
+    if (onlyIdx !== null && b + 1 !== onlyIdx) continue
     const brief = briefs[b]
     const run = `run${b + 1}`
     tally.briefs += 1
