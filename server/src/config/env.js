@@ -19,6 +19,16 @@ const env = {
   USE_VERTEX,
   GCP_PROJECT_ID: process.env.GCP_PROJECT_ID || '',
   GCP_LOCATION: process.env.GCP_LOCATION || 'us-central1',
+  // --- Endpoint protection (Phase 3) ---
+  // Comma-separated list of allowed browser origins for CORS. Defaults to local
+  // Vite dev only; set this to the deployed frontend origin in production.
+  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  // Optional shared-secret gate on POST /api/pipeline/runs. Empty = disabled
+  // (local dev is unaffected). Set this and give Ajay the value + header name
+  // (x-studiomind-key) before enabling it in production.
+  APP_SHARED_SECRET: process.env.APP_SHARED_SECRET || '',
+  // Hard cap on brief length, enforced in the controller before any DB/model call.
+  BRIEF_MAX_CHARS: Number(process.env.BRIEF_MAX_CHARS) || 2000,
 }
 
 /**

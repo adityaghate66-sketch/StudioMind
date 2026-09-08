@@ -18,6 +18,13 @@ const createRun = async (req, res, next) => {
       })
     }
 
+    if (brief.trim().length > env.BRIEF_MAX_CHARS) {
+      return res.status(400).json({
+        success: false,
+        message: `"brief" must be ${env.BRIEF_MAX_CHARS} characters or fewer.`,
+      })
+    }
+
     // Create the run document in running state
     const run = await PipelineRun.create({ brief: brief.trim(), status: 'running' })
     const runId = run._id

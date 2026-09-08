@@ -184,6 +184,7 @@ else moves. That's the whole payoff.
 > "unverifiable". The confirmed response shape is documented in a comment above
 > `verifyClaim` in `server/src/services/parallel/verifyClaim.js`.
 
+
 ### `utils/normalise.js` — quality control at the door
 
 Gemini returns whatever it feels like. Sometimes `"Confirmed"` with a capital C.
@@ -377,26 +378,35 @@ The three routes:
 | Saving after each step | Working |
 | Timeout / cancellation | Working |
 | Startup key checking | Working |
-| **Proven to run end to end** | **Not yet** |
-| Parallel request verified | **Working** |
-| Vertex AI (Google Cloud) | Not started |
-| Endpoint protection | Not started |
-| Deployment (Cloud Run) | Not started |
+| Gemini/Parallel retry with backoff | Written (`config/errors.js`, wired into both services) |
+| `responseSchema` on Gemini calls | Done |
+| Vertex AI (Google Cloud) | Code written and committed (`USE_VERTEX=true` toggle); not yet proven against a live Vertex project |
+| Endpoint protection | Done — helmet, CORS allowlist, per-route rate limits, 32kb body cap, brief length cap, optional shared-secret gate. Offline-verified (every check passes without touching Mongo/Gemini/Parallel); not yet exercised against real traffic |
+| Dockerfile / `.dockerignore` | Written; not yet built or run — no Docker available where this was authored |
+| **Proven to run end to end with real keys** | **Still not yet.** This is the actual blocker — see below |
+| Deployment (Cloud Run) | Not started — needs a real `gcloud` session |
 | Frontend | Ajay, in progress |
 
 **Order of work:**
 
-1. Run it once with real keys — prove Gemini and Parallel both actually respond
-2. ~~Verify the Parallel request against their live docs~~ — done: it runs through the
-   `parallel-web` SDK against `/v1/search` and returns real results (see the comment
-   above `verifyClaim`)
-3. Add `responseSchema` to the Gemini calls
-4. Move to Vertex AI
-5. Protect the endpoints
-6. Dockerfile → Cloud Run → a working public URL
+1. **Run it once with real keys — prove Gemini and Parallel both actually respond.**
+   This has never succeeded. The last real attempt (see `.acceptance.log`) died on the
+   screenplay step; the working theory was a Gemini free-tier quota wall
+   (`gemini-3.6-flash` exhausted, `gemini-flash-latest` 503s on schema-constrained JSON).
+   `GEMINI_MODEL=gemini-3.5-flash` was set as a fix but never re-tested. **This has to be
+   run from a machine with real internet access to `generativelanguage.googleapis.com` /
+   Vertex and to the Atlas cluster** — it cannot be proven from a sandboxed shell with no
+   external network route, which is what blocked verification here.
+2. ~~Verify the Parallel request against their live docs~~ — done.
+3. ~~Add `responseSchema` to the Gemini calls~~ — done.
+4. ~~Move to Vertex AI~~ — code done, unverified against a live project.
+5. ~~Protect the endpoints~~ — done, offline-verified.
+6. Build the Docker image, then `gcloud run deploy` → a working public URL. Dockerfile is
+   ready; the actual build/deploy needs Docker + `gcloud` on hand.
 
-**Step 1 gates everything.** Until one run completes end to end, everything
-below it is guesswork.
+**Step 1 still gates everything.** Every other row above can be "done" in the code and
+still not mean the product works — the only thing that actually proves it is one real
+run reaching `complete` with genuine Parallel source URLs.
 
 ---
 

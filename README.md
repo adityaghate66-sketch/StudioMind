@@ -100,15 +100,21 @@ npm run dev
 
 ### Environment variables
 
-Set these in `server/.env`:
+Set these in `server/.env` (see `server/.env.example` for the full annotated template):
 
 | Variable | Meaning |
 |---|---|
-| `PORT` | Server port. Defaults to `3000`. |
+| `PORT` | Server port. Defaults to `3000`. Cloud Run injects its own `PORT` (8080) at deploy time. |
 | `MONGO_URI` | MongoDB connection string. |
-| `GEMINI_API_KEY` | Google Gemini API key. |
+| `GEMINI_API_KEY` | Google Gemini API key. Required unless `USE_VERTEX=true`. |
 | `PARALLEL_API_KEY` | Parallel API key. |
-| `PIPELINE_TIMEOUT_MS` | Max pipeline runtime. Defaults to `120000`. |
+| `PIPELINE_TIMEOUT_MS` | Max pipeline runtime. Defaults to `300000` (5 min). |
+| `GEMINI_MODEL` | Optional model override. |
+| `USE_VERTEX` | `true` to route Gemini calls through Vertex AI (ADC auth) instead of the public API key. |
+| `GCP_PROJECT_ID` / `GCP_LOCATION` | Required when `USE_VERTEX=true`. |
+| `CORS_ORIGIN` | Comma-separated allowed browser origins. Defaults to `http://localhost:5173`. |
+| `APP_SHARED_SECRET` | Optional shared secret required on `POST /api/pipeline/runs` via an `x-studiomind-key` header. Unset = disabled. |
+| `BRIEF_MAX_CHARS` | Max characters accepted in a brief. Defaults to `2000`. |
 
 ### Try it
 
@@ -123,6 +129,29 @@ Take the `_id` from the response and poll:
 ```bash
 curl http://localhost:3000/api/pipeline/runs/<id>
 ```
+
+## Deployment
+
+A `Dockerfile` and `.dockerignore` are in `server/`, targeting Cloud Run:
+
+```bash
+gcloud run deploy studiomind-api \
+  --source server \
+  --region <region> \
+  --allow-unauthenticated \
+  --no-cpu-throttling \
+  --timeout 300 \
+  --min-instances 1 \
+  --set-secrets MONGO_URI=mongo-uri:latest,PARALLEL_API_KEY=parallel-key:latest
+```
+
+`--no-cpu-throttling` is not optional: the pipeline keeps running in the background after
+the HTTP response returns, and Cloud Run freezes CPU on idle instances unless this is set —
+without it, every run stalls at the `screenplay` step. Secrets are injected via Secret
+Manager (`--set-secrets`), never `--set-env-vars`. MongoDB Atlas needs either a `0.0.0.0/0`
+network access entry or a VPC connector, since Cloud Run's egress IPs are dynamic.
+
+**Not yet deployed.** The image has not been built or pushed anywhere.
 
 ## Repository layout
 

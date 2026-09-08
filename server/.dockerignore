@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+*.log
+.acceptance.log
+_phase3_selftest.js
+_to_delete/
