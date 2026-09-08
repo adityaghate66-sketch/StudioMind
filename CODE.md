@@ -383,30 +383,35 @@ The three routes:
 | Vertex AI (Google Cloud) | Code written and committed (`USE_VERTEX=true` toggle); not yet proven against a live Vertex project |
 | Endpoint protection | Done — helmet, CORS allowlist, per-route rate limits, 32kb body cap, brief length cap, optional shared-secret gate. Offline-verified (every check passes without touching Mongo/Gemini/Parallel); not yet exercised against real traffic |
 | Dockerfile / `.dockerignore` | Written; not yet built or run — no Docker available where this was authored |
-| **Proven to run end to end with real keys** | **Still not yet.** This is the actual blocker — see below |
-| Deployment (Cloud Run) | Not started — needs a real `gcloud` session |
+| **Proven to run end to end with real keys** | **Yes, as of 8 Sept.** 5/5 acceptance briefs passed (0 schema violations, 0 normalise substitutions on the last brief) and a real HTTP run (`6a9fd36c5a9ab724ebef672a`) reached `complete` in ~57s with 8 continuity claims, each carrying 2 real Parallel source URLs, and 6 shots. See `.acceptance.log`. |
+| Deployment (Cloud Run) | Not started — Dockerfile is ready but has never been built; needs Docker + a real `gcloud` session |
 | Frontend | Ajay, in progress |
+
+**What actually happened on the acceptance run (worth knowing before you touch the model
+config again):** `gemini-3.5-flash`'s free tier caps at **20 requests/day per model**, not
+just a per-minute rate — run5 hit that daily ceiling mid-sweep, not a transient blip, so
+retrying with backoff couldn't fix it. Switching `GEMINI_MODEL=gemini-3.7-flash` in
+`server/.env` gave a fresh per-model quota bucket and the run completed cleanly. If daily
+quota gets tight again before judging, either rotate to another free-tier model name the
+same way, or finish wiring `USE_VERTEX=true` (the code path already exists in
+`config/gemini.js` — it just hasn't been pointed at a billed Vertex project yet).
 
 **Order of work:**
 
-1. **Run it once with real keys — prove Gemini and Parallel both actually respond.**
-   This has never succeeded. The last real attempt (see `.acceptance.log`) died on the
-   screenplay step; the working theory was a Gemini free-tier quota wall
-   (`gemini-3.6-flash` exhausted, `gemini-flash-latest` 503s on schema-constrained JSON).
-   `GEMINI_MODEL=gemini-3.5-flash` was set as a fix but never re-tested. **This has to be
-   run from a machine with real internet access to `generativelanguage.googleapis.com` /
-   Vertex and to the Atlas cluster** — it cannot be proven from a sandboxed shell with no
-   external network route, which is what blocked verification here.
+1. ~~Run it once with real keys — prove Gemini and Parallel both actually respond.~~ — **done**.
 2. ~~Verify the Parallel request against their live docs~~ — done.
 3. ~~Add `responseSchema` to the Gemini calls~~ — done.
-4. ~~Move to Vertex AI~~ — code done, unverified against a live project.
-5. ~~Protect the endpoints~~ — done, offline-verified.
-6. Build the Docker image, then `gcloud run deploy` → a working public URL. Dockerfile is
-   ready; the actual build/deploy needs Docker + `gcloud` on hand.
+4. ~~Move to Vertex AI~~ — code done, still unverified against a live project (not needed
+   right now since the API-key path on `gemini-3.7-flash` works).
+5. ~~Protect the endpoints~~ — done, offline-verified, not yet hit with real production traffic.
+6. **Build the Docker image, then `gcloud run deploy` → a working public URL.** This is the
+   only thing left standing between this repo and a submittable, judgeable link. Dockerfile
+   is ready; the actual build/deploy needs Docker + `gcloud` on hand, which is not available
+   wherever this file is currently being edited from.
 
-**Step 1 still gates everything.** Every other row above can be "done" in the code and
-still not mean the product works — the only thing that actually proves it is one real
-run reaching `complete` with genuine Parallel source URLs.
+**Step 6 is now the only gate.** The pipeline itself is proven. What's left is entirely
+"turn it into a public URL that survives to October" — Dockerfile → image → Cloud Run →
+Atlas network access → confirm `/api/health` and a real run both work against that URL.
 
 ---
 
