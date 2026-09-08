@@ -18,12 +18,13 @@ const { isTransient, extractRetryDelay, withRetry } = require('../../config/erro
  *   (passed as config.responseSchema, requires responseMimeType: application/json).
  *   Define these in server/src/schemas/ — one per JSON-returning agent step.
  * @param {string} [options.model] - Model to use. Defaults to env.GEMINI_MODEL,
- *   then 'gemini-3.6-flash'.
+ *   then 'gemini-3.7-flash' (a model verified to serve schema-constrained JSON;
+ *   the older 3.6-flash fallback was exhausted and 503'd on responseSchema).
  * @param {AbortSignal} [options.signal] - Pipeline cancellation signal.
  * @returns {Promise<string|object>} - Raw text or parsed JSON.
  */
 const generate = async ({ prompt, expectJson = false, model, schema, signal }) => {
-  const resolvedModel = model || env.GEMINI_MODEL || 'gemini-3.6-flash'
+  const resolvedModel = model || env.GEMINI_MODEL || 'gemini-3.7-flash'
   const genai = getGeminiClient()
 
   const config = {}
