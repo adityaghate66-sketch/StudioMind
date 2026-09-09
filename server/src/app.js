@@ -44,7 +44,7 @@ app.use('/api/pipeline', pipelineRoutes)
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: `Route ${req.originalUrl} not found` })
+  res.status(404).json({ message: `Route ${req.originalUrl} not found and Server is Running.` })
 })
 
 // Global error handler — must be last
